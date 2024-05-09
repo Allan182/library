@@ -1,0 +1,127 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model alunos {
+  codAluno          Int        @id
+  carteiraEstudante String?    @db.VarChar(30)
+  pessoas           pessoas    @relation(fields: [codAluno], references: [codPessoa], onDelete: NoAction, onUpdate: NoAction, map: "alunos_FK")
+  locacoes          locacoes[]
+}
+
+model autores {
+  codAutor       Int             @id
+  numPublicacoes Int?            @db.UnsignedSmallInt
+  pseudonimo     String?         @db.VarChar(100)
+  pessoas        pessoas         @relation(fields: [codAutor], references: [codPessoa], onDelete: NoAction, onUpdate: NoAction, map: "autores_FK")
+  autoreslivros  autoreslivros[]
+}
+
+model autoreslivros {
+  codAutor Int
+  codLivro Int     @db.UnsignedInt
+  autores  autores @relation(fields: [codAutor], references: [codAutor], onDelete: NoAction, onUpdate: NoAction, map: "autoresLivros_FK1")
+  livros   livros  @relation(fields: [codLivro], references: [codLivro], onDelete: NoAction, onUpdate: NoAction, map: "autoresLivros_FK2")
+
+  @@id([codAutor, codLivro])
+  @@index([codLivro], map: "autoresLivros_FK2")
+}
+
+model editoras {
+  codEditora  Int       @id @default(autoincrement())
+  CNPJ        String    @db.VarChar(14)
+  nomeEditora String    @db.VarChar(200)
+  codEndereco Int
+  enderecos   enderecos @relation(fields: [codEndereco], references: [codEndereco], onDelete: Cascade, map: "FK_editoras")
+  livros      livros[] 
+  @@index([codEndereco], map: "editoras_FK")
+}
+
+model enderecos {
+  codEndereco Int        @id @default(autoincrement())
+  logradouro  String?    @db.VarChar(100)
+  numero      String?    @db.VarChar(6)
+  bairro      String?    @db.VarChar(100)
+  UF          String     @db.Char(2)
+  CEP         String     @db.VarChar(8)
+  complemento String?    @db.VarChar(100)
+  cidade      String?    @db.VarChar(100)
+  editoras    editoras[]
+  pessoas     pessoas[]
+}
+
+model funcionarios {
+  codFuncionario Int        @id
+  dataAdmissao   DateTime   @db.Date
+  cargo          String     @db.VarChar(100)
+  pessoas        pessoas    @relation(fields: [codFuncionario], references: [codPessoa], onDelete: Cascade, map: "FK_funcionarios")
+  locacoes       locacoes[]
+}
+
+model itenslocacoes {
+  codLocacao Int      @db.UnsignedInt
+  codLivro   Int      @db.UnsignedInt
+  locacoes   locacoes @relation(fields: [codLocacao], references: [codLocacao], onDelete: NoAction, onUpdate: NoAction, map: "itensLocacoes_FK1")
+  livros     livros   @relation(fields: [codLivro], references: [codLivro], onDelete: NoAction, onUpdate: NoAction, map: "itensLocacoes_FK2")
+
+  @@id([codLocacao, codLivro])
+  @@index([codLivro], map: "itensLocacoes_FK2")
+}
+
+model livros {
+  codLivro        Int             @id @default(autoincrement()) @db.UnsignedInt
+  codEditora      Int
+  titulo          String          @db.VarChar(1086)
+  edicao          Int?            @db.UnsignedSmallInt
+  ano             Int?            @db.UnsignedSmallInt
+  ISBN            String?         @db.VarChar(30)
+  localLancamento String?         @db.VarChar(30)
+  autoreslivros   autoreslivros[]
+  itenslocacoes   itenslocacoes[]
+  editoras        editoras        @relation(fields: [codEditora], references: [codEditora], onDelete: NoAction, onUpdate: NoAction, map: "livros_FK")
+
+  @@index([codEditora], map: "livros_FK")
+}
+
+model locacoes {
+  codLocacao     Int             @id @default(autoincrement()) @db.UnsignedInt
+  codFuncionario Int
+  codAluno       Int
+  dataLocacao    DateTime        @db.DateTime(0)
+  dataDevolucao  DateTime?       @db.DateTime(0)
+  itenslocacoes  itenslocacoes[]
+  funcionarios   funcionarios    @relation(fields: [codFuncionario], references: [codFuncionario], onDelete: NoAction, onUpdate: NoAction, map: "locacoes_FK1")
+  alunos         alunos          @relation(fields: [codAluno], references: [codAluno], onDelete: NoAction, onUpdate: NoAction, map: "locacoes_FK2")
+
+  @@index([codFuncionario], map: "locacoes_FK1")
+  @@index([codAluno], map: "locacoes_FK2")
+}
+
+model pessoas {
+  codPessoa    Int           @id @default(autoincrement())
+  nome         String        @db.VarChar(100)
+  sobrenome    String?       @db.VarChar(300)
+  CPF          String?       @db.VarChar(11)
+  email        String?       @db.VarChar(300)
+  codEndereco  Int?
+  alunos       alunos?
+  autores      autores?
+  funcionarios funcionarios?
+  enderecos    enderecos?    @relation(fields: [codEndereco], references: [codEndereco], onDelete: Cascade, map: "FK_pessoas")
+  telefones    telefones[]
+
+  @@index([codEndereco], map: "FK_pessoas")
+}
+
+model telefones {
+  codPessoa Int
+  numero    String  @db.VarChar(13)
+  pessoas   pessoas @relation(fields: [codPessoa], references: [codPessoa], onDelete: NoAction, onUpdate: NoAction, map: "telefones_FK")
+
+  @@id([codPessoa, numero])
+}
